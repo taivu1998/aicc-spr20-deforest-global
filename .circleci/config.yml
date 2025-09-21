@@ -1,0 +1,68 @@
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/python:3.7
+    steps:
+      - checkout
+      - run:
+          command: 'pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html'
+          name: 'Install Torch Dependencies'
+      - run:
+          command: 'pip install -r requirements.txt'
+          name: 'Install Dependencies'
+      - run:
+          command: 'python testing_model.py'
+          name: 'Testing for all pretrained models'
+      - run:
+          command: 'python main.py train --dataset=".circleci" --model="Sequential2DClassifier-DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=False --lrcn=True --image_net_norm
+            False --exp_name="circle-lcrn" --save_dir="sandbox" --tb_path="sandbox/tb"'
+          name: 'LRCN model (training)'
+      - run:
+          command: 'python main.py test --dataset=".circleci" --model="Sequential2DClassifier-DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=False --lrcn=True --image_net_norm
+            False --exp_name="circle-lcrn" --save_dir "sandbox" --ckpt_path="sandbox/circle-lcrn/_ckpt_epoch_0.ckpt"
+            --tb_path="sandbox/tb" --test_data_split="val"'
+          name: 'LRCN model (testing)'
+      - run:
+          command: 'python main.py train --dataset=".circleci" --model="DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=True  --image_net_norm
+            False --exp_name="circle-densenet121" --save_dir "sandbox" --tb_path="sandbox/tb"'
+          name: 'DenseNet121 model (training)'
+      - run:
+          command: 'python main.py test --dataset=".circleci" --model="DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=True  --image_net_norm
+            False --exp_name="circle-densenet121" --save_dir "sandbox" --tb_path="sandbox/tb"
+            --ckpt_path="sandbox/circle-densenet121/_ckpt_epoch_0.ckpt" --test_data_split="val"'
+          name: 'DenseNet121 model (testing)'
+      - run:
+          command: 'python main.py train --dataset=".circleci" --model="DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=True  --image_net_norm
+            False --exp_name="circle-densenet121-deterministic" --save_dir "sandbox"
+            --tb_path="sandbox/tb" --deterministic True'
+          name: 'Deterministic DenseNet121 model (training)'
+      - run:
+          command: 'python main.py test --dataset=".circleci" --model="DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=True  --image_net_norm
+            False --exp_name="circle-densenet121-determinisitc" --save_dir "sandbox"
+            --tb_path="sandbox/tb" --deterministic True --ckpt_path="sandbox/circle-densenet121-deterministic/_ckpt_epoch_0.ckpt"
+            --test_data_split="val"'
+          name: 'Deterministic DenseNet121 model (testing)'
+      - run:
+          command: 'python main.py train --dataset=".circleci" --model="DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=True  --image_net_norm
+            True --exp_name="circle-densenet121-elif-transform-patch" --save_dir "sandbox"
+            --tb_path="sandbox/tb" --deterministic True'
+          name: 'Normalization False model (training)'
+      - run:
+          command: 'python main.py test --dataset=".circleci" --model="DenseNet121"
+            --batch_size=1 --gpus=0 --max_epochs=1 --composite=True  --image_net_norm
+            True --exp_name="circle-densenet121-elif-tranform-patch" --save_dir "sandbox"
+            --tb_path="sandbox/tb" --deterministic True --ckpt_path="sandbox/circle-densenet121-elif-transform-patch/_ckpt_epoch_0.ckpt"
+            --test_data_split="val"'
+          name: 'Normalization False model (testing)'
+version: 2.1
+workflows:
+  main:
+    jobs:
+      - build-and-test

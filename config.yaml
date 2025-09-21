@@ -1,0 +1,28 @@
+meta:
+    script: python /sailhome/<CS_ID>/<ABS PATH TO main.py> train
+    sandbox: /sailhome/<CS_ID>/.launchpad
+    mode: grid 
+    sample: 20
+    repeat: 1
+    gpus: 1
+    logpath: /sailhome/<CS_ID>/logs
+    prefix: post2012_hp_tuning_v5
+    key: [lr, weight_decay]
+    
+hp: 
+    model: [Sequential2DClassifier-DenseNet121]
+    lr: [3e-6, 3e-5, 3e-4, 3e-3, 3e-2]
+    weight_decay: [1e-3, 1e-2, 1e-1]
+    augmentation: [aggressive]
+    pretrained: [True]
+    composite: [False]
+    patience: [25]
+    lrcn: [True]
+    gpus: [1]
+    batch_size: [10]
+    regions: [None]
+    
+sbatch:
+    mem: 16G  
+    exclude: deep[23-25], deep[1-21]
+    

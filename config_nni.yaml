@@ -1,0 +1,35 @@
+meta:
+    script: python main.py train
+    sandbox: /deep/group/aicc-bootcamp/deforest-global/models/sandbox/
+    mode: nni
+    sample: 20
+    repeat: 1
+    gpus: 1
+    model: DenseNet121
+    logpath: /deep/group/aicc-bootcamp/deforest-global/models/sandbox/log
+    prefix: nni_experiment
+    key: [lr, weight_decay, augmentation]
+    port: 8088
+
+hp:
+    lr: [3e-5]
+    weight_decay: [1e-2]
+    augmentation: [none, aggressive]
+    pretrained: [True, False]
+    composite: [False]
+    gpus: [1]
+
+sbatch:
+    mem: 16G
+
+nni:
+    authorName: AuthorName
+    experimentName: 'HP search with NNI'
+    maxExecDuration: 2h
+    maxTrialNum: 50
+    trialConcurrency: 12
+    tuner:
+        builtinTunerName: TPE
+        classArgs:
+            optimize_mode: maximize
+    useAnnotation: false

@@ -1,0 +1,31 @@
+meta:
+    script: python /sailhome/ad9697/fusion_net/simplify_flags/aicc-spr20-deforest-global/main.py train
+    sandbox: /sailhome/ad9697/.launchpad
+    mode: grid
+    sample: 20
+    repeat: 1
+    gpus: 1
+    logpath: /sailhome/ad9697/logs
+    prefix: hptuning_052621
+    key: [lr, weight_decay, augmentation, load_aux, late_fusion_regions, late_fusion_polygon_loss]
+
+hp:
+    model: [DenseNet121]
+    lr: [3e-4, 3e-5, 3e-6]
+    weight_decay: [1e-3, 1e-2, 1e-1]
+    augmentation: [aggressive]
+    pretrained: [True]
+    composite: [True]
+    patience: [25]
+    lrcn: [False]
+    gpus: [1]
+    batch_size: [10]
+    regions: [None]
+    load_polygon_loss: [True]
+    load_aux: [True]
+    late_fusion_regions: [onehot]
+    late_fusion_polygon_loss: [True]
+
+sbatch:
+    mem: 16G
+    exclude:  deep[1-16,20-25]
