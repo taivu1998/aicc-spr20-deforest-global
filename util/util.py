@@ -12,9 +12,15 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from PIL import Image
 import re
-import geopy
-import pycountry_convert
-from geopy.geocoders import Nominatim
+try:
+    import pycountry_convert
+except ImportError:  # pragma: no cover - optional for geospatial helpers only
+    pycountry_convert = None
+
+try:
+    from geopy.geocoders import Nominatim
+except ImportError:  # pragma: no cover - optional for geospatial helpers only
+    Nominatim = None
 import torch
 import fire
 from util.constants import *
@@ -212,6 +218,8 @@ def alpha2_to_continent(alpha2):
     Returns:
         Continent code (str): 2-char string, upper case 
     """
+    if pycountry_convert is None:
+        raise ImportError("pycountry_convert is required for alpha2_to_continent().")
     return pycountry_convert.country_alpha2_to_continent_code(alpha2.upper())
 
     
@@ -227,6 +235,8 @@ def latlon_to_continent(latlon, nominatim_tout=30):
     Returns:
         Continent code (str): 2-char string, upper case 
     """    
+    if Nominatim is None:
+        raise ImportError("geopy is required for latlon_to_continent().")
     geolocator = Nominatim(timeout=nominatim_tout)
     coords = ','.join([str(num) for num in latlon])
     location = geolocator.reverse(coords)

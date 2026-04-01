@@ -4,11 +4,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import pytorch_lightning as pl
-import torchvision.transforms as T
 from torch.utils.data import DataLoader
-from ignite.metrics import Accuracy
 import torch.nn as nn
-import torch.nn.functional as F
 import os.path
 
 from models import get_model
@@ -35,11 +32,28 @@ class Model(pl.LightningModule, TFLogger, ReportLogger):
 
         if self.hparams["class_weight"]:
             class_weights = torch.Tensor(
-                self.get_dataset(TRAIN_SPLIT).class_weights())
+                self.get_dataset(C.TRAIN_SPLIT).class_weights())
             class_weights = class_weights / class_weights.sum()
             self.loss = get_loss_fn(self.hparams, class_weights=class_weights)
         else:
             self.loss = get_loss_fn(self.hparams)
+
+    def _extract_pre_logits(self, batch):
+        if hasattr(self.model, 'extract_pre_logits'):
+            x = self.model.extract_pre_logits(batch)
+        elif hasattr(self.model, 'get_logits'):
+            x = self.model.get_logits(batch)
+        elif hasattr(self.model, 'extract_features'):
+            x = self.model.extract_features(batch['image'])
+        else:
+            raise ValueError(
+                f"Model {type(self.model).__name__} does not expose a "
+                "feature extractor for output_pre_logits."
+            )
+
+        if x.ndim > 2:
+            x = self.pool(x).view(x.size(0), -1)
+        return x
 
     def forward(self, batch):
         y = batch['label']
@@ -128,9 +142,7 @@ class Model(pl.LightningModule, TFLogger, ReportLogger):
 
     def test_step(self, batch, batch_nb):
         if self.hparams['output_pre_logits']:
-            x = self.model.model.features(batch['image'])
-            x = F.relu(x, inplace=False)
-            x = self.pool(x).view(x.size(0), -1)
+            x = self._extract_pre_logits(batch)
         label, index, event_index, gooder_id = batch['label'], batch['index'], batch['event_index'], batch['gooder_id']
         
         logits, loss, acc = self.forward(batch)
@@ -155,7 +167,7 @@ class Model(pl.LightningModule, TFLogger, ReportLogger):
         if self.hparams['output_pre_logits']:
             logs['pre_logits'] = x
         
-        if self.hparams['regions']:
+        if 'region' in batch:
             logs['region'] = batch['region']
         if self.hparams['eval_by_pixel']:
             logs['area'] = batch['loss_areas']
@@ -190,7 +202,7 @@ class Model(pl.LightningModule, TFLogger, ReportLogger):
         indices = np.stack([x['index'] for x in outputs])
         event_indices = np.stack([x['event_index'] for x in outputs])
         regions = None
-        if self.hparams['regions']:
+        if outputs and 'region' in outputs[0]:
             regions = np.stack([x['region'] for x in outputs])
         
         if self.hparams['eval_by_pixel']:

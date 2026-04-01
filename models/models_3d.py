@@ -1,7 +1,5 @@
-import pretrainedmodels
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from .pretrained import (DenseNet121,
                          DenseNet161,
@@ -62,7 +60,7 @@ class Sequential2DClassifier(nn.Module):
         inputs = torch.transpose(inputs, 1, 2).contiguous()
         inputs = inputs.view(B * S, C, H, W)
 
-        features = self.model.features(inputs)
+        features = self.model.extract_features(inputs)
         features = features.view(B, S, self.num_ftrs)
 
         lstm_out, _ = self.lstm(features)

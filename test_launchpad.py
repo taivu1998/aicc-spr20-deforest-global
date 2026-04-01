@@ -1,10 +1,7 @@
-import main
 from util import constants as C
 from util import util as U
 import argparse
-import pathlib
 from pathlib import Path
-import pdb
 
 CHOSEN = ['ablation_050621_3e-5_1e-3_aggressive_False_none_True', 
           'ablation_050621_3e-5_1e-3_aggressive_False_onehot_False',
@@ -12,6 +9,19 @@ CHOSEN = ['ablation_050621_3e-5_1e-3_aggressive_False_none_True',
           'ablation_050621_3e-5_1e-3_aggressive_False_none_False',
           'ablation_050621_3e-5_1e-3_aggressive_True_onehot_True'
          ]
+
+
+def get_checkpoints(expt_path):
+    ckpt_dir = expt_path / "ckpts"
+    ckpts = sorted(ckpt_dir.glob("*.ckpt"), reverse=True)
+    if ckpts:
+        return ckpts
+
+    legacy_ckpts = sorted(expt_path.glob("*.ckpt"), reverse=True)
+    if legacy_ckpts:
+        return legacy_ckpts
+
+    raise FileNotFoundError(f"No checkpoints found under {ckpt_dir} or {expt_path}")
 
 def get_args():
     parser = argparse.ArgumentParser(description='Arguments for test-lpad func.')
@@ -27,6 +37,7 @@ def get_args():
     return args
 
 if __name__ == "__main__":
+    import main
     
     args = get_args()  
         
@@ -40,7 +51,7 @@ if __name__ == "__main__":
             print(f'Skipping expt {expt_name}')
             continue
         expt_path = C.SANDBOX_DIR / expt_name
-        ckpts = sorted(list(expt_path.glob("*.ckpt")), reverse=True) #most recent first
+        ckpts = get_checkpoints(expt_path)
         print(f'Found {len(ckpts)} ckpts for expt {expt_name}')
         
         ckpt_path = ckpts[0] #single ckpt for now

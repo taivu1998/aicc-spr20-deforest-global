@@ -1,4 +1,7 @@
-import pretrainedmodels
+try:
+    import pretrainedmodels
+except ImportError:  # pragma: no cover - exercised when optional dep missing
+    pretrainedmodels = None
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,6 +19,14 @@ class PretrainedModel(nn.Module):
     def forward(self, x):
         raise NotImplementedError('Subclass of PretrainedModel ' +
                                   'must implement forward method.')
+
+    def extract_features(self, x):
+        raise NotImplementedError('Subclass of PretrainedModel ' +
+                                  'must implement extract_features.')
+
+    def get_feature_dim(self):
+        raise NotImplementedError('Subclass of PretrainedModel ' +
+                                  'must implement get_feature_dim.')
 
     def fine_tuning_parameters(self, boundary_layers, lrs):
         """Get a list of parameter groups that can be passed to an optimizer.
@@ -63,6 +74,10 @@ class CadeneModel(PretrainedModel):
 
     def __init__(self, model_name, model_args=None):
         super(CadeneModel, self).__init__()
+        if pretrainedmodels is None:
+            raise ImportError(
+                "pretrainedmodels is required for CadeneModel backbones."
+            )
 
         model_class = pretrainedmodels.__dict__[model_name]
         pretrained = "imagenet" if model_args.pretrained else None
@@ -73,11 +88,22 @@ class CadeneModel(PretrainedModel):
         num_ftrs = self.model.last_linear.in_features
         self.fc = nn.Linear(num_ftrs, model_args.num_classes)
 
-    def forward(self, x):
-        x = x['image']
+    def get_feature_dim(self):
+        return self.model.last_linear.in_features
+
+    def extract_features(self, x):
         x = self.model.features(x)
         x = F.relu(x, inplace=False)
         x = self.pool(x).view(x.size(0), -1)
+        return x
+
+    # Backward-compatible alias used by older code paths.
+    def features(self, x):
+        return self.extract_features(x)
+
+    def forward(self, x):
+        x = x['image']
+        x = self.extract_features(x)
         x = self.fc(x)
         return x
 
@@ -136,7 +162,7 @@ class TorchVisionModel(PretrainedModel):
             return self.model.fc.in_features
         raise RuntimeError('Only DenseNet and ResNet implemented')
 
-    def features(self, x):
+    def extract_features(self, x):
         if 'densenet' in self.model_name:
             x = self.model.features(x)
             x = F.relu(x, inplace=False)
@@ -153,9 +179,13 @@ class TorchVisionModel(PretrainedModel):
             x = self.pool(x).view(x.size(0), -1)
         return x
 
+    # Backward-compatible alias used by older code paths.
+    def features(self, x):
+        return self.extract_features(x)
+
     def forward(self, x):
         x = x['image']
-        x = self.features(x)
+        x = self.extract_features(x)
         if 'densenet' in self.model_name:
             x = self.model.classifier(x)
         elif 'resnet' in self.model_name:

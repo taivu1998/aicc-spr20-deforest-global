@@ -2,9 +2,14 @@ f"""Define constants to be used throughout the repository."""
 from pathlib import Path
 import torchvision.transforms as T
 from collections import OrderedDict
+import numpy as np
+
+# imgaug still references the removed np.bool alias on newer NumPy versions.
+if not hasattr(np, "bool"):
+    np.bool = bool  # type: ignore[attr-defined]
+
 import imgaug.augmenters as iaa
 import imgaug as ia
-import numpy as np
 
 # Dataset constants
 IMAGENET_MEAN = [0.485, 0.456, 0.406]

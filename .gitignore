@@ -121,3 +121,6 @@ scripts/
 
 # sandbox
 sandbox/
+
+# local review / planning notes
+LOCAL_IMPROVEMENT_PLAN.md

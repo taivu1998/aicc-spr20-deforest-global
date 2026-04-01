@@ -38,6 +38,7 @@ class ClassificationDataset(BaseDataset):
             output_image = torch.stack(image_list, 1)
         
         lat, lon = self._get_latlon(index)
+        region = self._get_region(index)
         
         loss_areas = None
         if self._load_polygon_loss:
@@ -50,7 +51,7 @@ class ClassificationDataset(BaseDataset):
             "label": label,
             "lat": lat,
             "lon": lon,
-            "region": image_info[C.REGION_HEADER],
+            "region": region,
             "gooder_id": image_info["GoodeR_ID"]
         }
 

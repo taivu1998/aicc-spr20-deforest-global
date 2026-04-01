@@ -31,16 +31,23 @@ class ReportLogger:
         plt_labels = self.hparams['labels']
         plt_labels = [string.lower().replace('deforestation', '')
                                    for string in plt_labels]  # First class too long for x ticks
+        preds = np.asarray(preds).reshape(-1)
+        labels = np.asarray(labels).reshape(-1)
+        if regions is not None:
+            regions = np.asarray(regions).reshape(-1)
+        if areas is not None:
+            areas = np.asarray(areas).reshape(-1)
 
         plt_save_dir = self.hparams['default_save_path']
         if not os.path.exists(plt_save_dir):
             os.makedirs(plt_save_dir)
 
         # regionwise analysis
-        if self.hparams['regions']:
-            for region in C.CONTINENTS:
+        if regions is not None:
+            for region in sorted(np.unique(regions).tolist()):
                 region_preds = preds[regions == region]
                 region_labels = labels[regions == region]
+                region_name = self._get_region_name(region)
 
                 # 'Smoothing'
                 region_preds = np.concatenate(
@@ -52,19 +59,19 @@ class ReportLogger:
                             region_labels,
                             region_preds,
                             target_names=plt_labels)
-                logging.info(f'Regional Class Report for {region}')
+                logging.info(f'Regional Class Report for {region_name}')
                 logging.info(region_report)
-                region_report_path = os.path.join(plt_save_dir, f'class_table_{region}.txt')
-                region_heatmap_path = os.path.join(plt_save_dir, f'conf_heatmap_{region}.jpg')
+                region_report_path = os.path.join(plt_save_dir, f'class_table_{region_name}.txt')
+                region_heatmap_path = os.path.join(plt_save_dir, f'conf_heatmap_{region_name}.jpg')
                 with open(region_report_path, 'w+') as fp:
                     fp.write(region_report)
 
-                hm = sns.heatmap(confusion_matrix(region_labels, region_preds, normalize='true'), 
+                sns.heatmap(confusion_matrix(region_labels, region_preds, normalize='true'),
                                  cbar=True,
-                                 xticklabels=plt_labels, 
-                                 yticklabels=plt_labels, 
+                                 xticklabels=plt_labels,
+                                 yticklabels=plt_labels,
                                  square=True)
-                plt.title(f'Conf matrix for {region}')
+                plt.title(f'Conf matrix for {region_name}')
                 plt.savefig(region_heatmap_path, bbox_inches='tight')
                 plt.close()
 
@@ -88,13 +95,21 @@ class ReportLogger:
         print('Class report for all data (not weighted by loss area):')
         print(report)
         
-        hm = sns.heatmap(confusion_matrix(labels, preds, normalize='true'), 
+        sns.heatmap(confusion_matrix(labels, preds, normalize='true'),
                          cbar=True,
-                         xticklabels=plt_labels, 
-                         yticklabels=plt_labels, 
+                         xticklabels=plt_labels,
+                         yticklabels=plt_labels,
                          square=True)
         overall_heatmap_path = os.path.join(plt_save_dir, 'conf_heatmap_overall.jpg')
         plt.savefig(overall_heatmap_path, bbox_inches='tight')
+        plt.close()
+
+    def _get_region_name(self, region):
+        if isinstance(region, np.generic):
+            region = region.item()
+        if isinstance(region, (int, np.integer)) and 0 <= region < len(C.REGIONS):
+            return C.REGIONS[region]
+        return str(region)
 
 
 def prep_images_for_logging(images, pretrained=False,

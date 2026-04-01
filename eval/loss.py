@@ -13,4 +13,4 @@ def get_loss_fn(loss_args, class_weights=None):
     elif loss_fn == "CE":
         return torch.nn.CrossEntropyLoss(weight=class_weights)
     else:
-        raise ValueError(f"loss_fn {loss_args.loss_fn} not supported.")
+        raise ValueError(f"loss_fn {loss_fn} not supported.")

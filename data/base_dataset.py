@@ -82,6 +82,10 @@ class BaseDataset(torch.utils.data.Dataset):
         pil_image = ImageEnhance.Brightness(pil_image).enhance(1.5)
         image = np.array(pil_image)
         return image
+
+    def _get_composite_path(self, index):
+        im_dir = Path(self._image_info.iloc[index][IMG_PATH_HEADER])
+        return im_dir / self._image_info.iloc[index][IMG_OPTION_COMPOSITE]
         
     def _get_image(self, index):
         image_list = list()
@@ -91,7 +95,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         if not self._lrcn:
             if self._img_option == IMG_OPTION_COMPOSITE:
-                im_path = im_dir / self._image_info.iloc[index][IMG_OPTION_COMPOSITE]
+                im_path = self._get_composite_path(index)
             elif self._img_option == IMG_OPTION_RANDOM:
                 rgb_dir = im_dir / 'rgb'
                 if self._load_mode == 'scene':
@@ -105,7 +109,9 @@ class BaseDataset(torch.utils.data.Dataset):
                     glob_results = sorted(Path(rgb_dir).glob('2*.png'))
                 elif self._load_mode == 'all':
                     glob_results = sorted(Path(rgb_dir).glob('2*.png'))
-                    glob_results.append(im_dir / self._image_info.iloc[index][IMG_OPTION_COMPOSITE])
+                    glob_results.append(self._get_composite_path(index))
+                if len(glob_results) == 0:
+                    glob_results = [self._get_composite_path(index)]
                 im_path = random.choice(glob_results)
             else:
                 rgb_dir = im_dir / 'rgb'
@@ -137,7 +143,7 @@ class BaseDataset(torch.utils.data.Dataset):
             
             if num_images == 0:
                 # load composite as backup
-                im_path = rgb_dir / self._image_info.iloc[index][IMG_OPTION_COMPOSITE]
+                im_path = self._get_composite_path(index)
                 glob_results = [im_path]
                        
             ## Set ordering of images
@@ -146,9 +152,12 @@ class BaseDataset(torch.utils.data.Dataset):
                 
             if not self._first_last:
                 # Lower accuracy when replacing missing images with blank images rather than stacking at the end
-                
+                loaded_images = len(image_list)
                 blank_shape = image_list[0].shape # image list cannot be empty
-                blanks = [np.zeros(blank_shape, dtype=np.float32) for _ in range(num_images, MAX_IMGS_PER_LOCATION)]
+                blanks = [
+                    np.zeros(blank_shape, dtype=np.float32)
+                    for _ in range(loaded_images, MAX_IMGS_PER_LOCATION)
+                ]
                 if self._padding == 'end':
                     image_list = image_list + blanks
                 elif self._padding == 'start':
